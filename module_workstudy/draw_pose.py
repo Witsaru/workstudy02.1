@@ -1,4 +1,4 @@
-import HolisticModule as hm
+from module_workstudy import HolisticModule as hm
 import cv2
 
 class DrawPose():

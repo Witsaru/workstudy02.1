@@ -1,6 +1,6 @@
 # from timeit import default_timer as timer
 # import graphviz
-from timer_ import Timer
+from module_workstudy.timer_ import Timer
 
 class Motion_time():
 

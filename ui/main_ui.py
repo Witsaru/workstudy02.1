@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import sys
+import os
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog
 import cv2
@@ -13,29 +14,28 @@ import serial
 import json
 import time
 import math
-sys.path.append("module_workstudy")
+import ast
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # sys.path.append("/home/witsarut/workstudy_ws/src/opencv_ros/opencv_ros")
 
-import HolisticModule as hm
-import AssemblePats as ap
-import draw_pose as dp
-import Motion as M
-import utils as u
+from module_workstudy import HolisticModule as hm
+from module_workstudy import AssemblePats as ap
+from module_workstudy import draw_pose as dp
+from module_workstudy import Motion as M
+from module_workstudy import utils as u
 # from opencv_ros2_sub import ImageSubscriber, cv_bridge_to_pixmap
-import pandas_f as pdf
-from timer_ import Timer
-import cal_st_
+from module_workstudy import pandas_f as pdf
+from module_workstudy.timer_ import Timer
+from module_workstudy import cal_st_
 
-sys.path.append("plot")
-# import test_polt01 as tp01
-import plot_time_process as ptp
-import plot_poor_graph as ppg
+from plot import plot_time_process as ptp
+from plot import plot_poor_graph as ppg
 
 
-import plot_process_time as ppt
-import plot_poor as pp
-import calculate_st as cal_st
-import flow_process as fp
+from ui import plot_process_time as ppt
+from ui import plot_poor as pp
+from ui import calculate_st as cal_st
+from ui import flow_process as fp
 
 # rclpy.init()
 
@@ -52,7 +52,11 @@ class VideoCaptureWidget(QtWidgets.QLabel):
 
         self.timer = QtCore.QTimer(self)
         self.timer2 = QtCore.QTimer(self)
-        self.save_data = pdf.C_pandas("Test_02B")
+        # if isinstance(self, VideoCaptureWidget):
+        self.save_data = pdf.C_pandas(self.ui.label_name)
+        print(self.ui.label_name)
+        self.scrip_r = self.ui.actual_list_left #[6,7,8]
+        self.scrip_l = self.ui.actual_list_right #[5,4,3]
 
         # self.anime_p = ptr.anime_polt()
         # self.process_time = pws.plotlib()
@@ -61,7 +65,7 @@ class VideoCaptureWidget(QtWidgets.QLabel):
             self.arduino = serial.Serial(port="/dev/ttyACM0", baudrate=115200, timeout=0.1)
 
         except Exception as e:
-            print('Error = ', e)
+            self.ui.label_textoutput.setText(f'Error = {e} ')
 
         # self.bridge = CvBridge()
 
@@ -71,9 +75,6 @@ class VideoCaptureWidget(QtWidgets.QLabel):
 
         self.is_running = False
         self.poeslist = None
-
-        self.scrip_r = [6,7,8]
-        self.scrip_l = [5,4,3]
 
         self.sensor_r = 0
         self.sensor_l = 0
@@ -110,7 +111,7 @@ class VideoCaptureWidget(QtWidgets.QLabel):
 
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_1000)
 
-        self.average_shoulder_width_cm = 44.4
+        self.average_shoulder_width_cm = 45.7
         self.hypothetical_pixel_width = 180
         self.hypothetical_pixel_width2 = 140
         self.pixels_per_cm = (
@@ -128,6 +129,12 @@ class VideoCaptureWidget(QtWidgets.QLabel):
 
     def start_video(self, source):
         if not self.is_running:
+            self.save_data = pdf.C_pandas(self.ui.label_name)
+            print(self.ui.label_name)
+            self.scrip_r = self.ui.actual_list_left #[6,7,8]
+            self.scrip_l = self.ui.actual_list_right #[5,4,3]
+
+
             self.s_time_program = time.time()
             self._runpoor = time.time()
             self.round+=1
@@ -206,7 +213,7 @@ class VideoCaptureWidget(QtWidgets.QLabel):
                         id_11 = self.memory_aruco(11, frame)
 
                     except Exception as e:
-                        print('Error = ', e)
+                        self.ui.label_textoutput.setText(f'Error = {e} ')
                     # id_l = self.memory_aruco(self.sci[self.index_], frame)
                     # print(id_l, self.index_, id_0)
 
@@ -268,9 +275,10 @@ class VideoCaptureWidget(QtWidgets.QLabel):
 
                             pixel_distance_shoulders = abs(r_shoulder[0] - l_shoulder[0])
                             distance_shoulders_cm = (pixel_distance_shoulders / self.pixels_per_cm)
+                            self.ui.lcdNumber_biacromialbreadth.display(distance_shoulders_cm)
                             # print( distance_shoulders_cm)
 
-                            if (distance_shoulders_cm >= 40):
+                            if (distance_shoulders_cm >= 37):
                                 # print( distance_shoulders_cm)
 
                                 if sho_90_ == 90:
@@ -316,7 +324,7 @@ class VideoCaptureWidget(QtWidgets.QLabel):
                                 self.point_h_l_y.append(l_wrist[1])
 
                         except Exception as e:
-                            print('Error = ', e)
+                            self.ui.label_textoutput.setText(f'Error = {e} ')
 
                 elif self == self.ui.cam_sidelabel:
                     self.holistic.show_action(frame)
@@ -351,7 +359,7 @@ class VideoCaptureWidget(QtWidgets.QLabel):
                             D = b_cm + math.sqrt(abs(p_h)) + f_cm
                             # print(D)
                         except Exception as e:
-                            print(e)
+                            self.ui.label_textoutput.setText(f'Error = {e} ')
 
                         neck = ap.findAngle(r_shoulder, r_eye)
                         torso = ap.findAngle(r_hip, r_shoulder)
@@ -442,10 +450,13 @@ class Ui_MainWindow(object):
         self.fname_alltime = None
         self.fname_timealert = None
         self.fname_timepoor = None
+        self.actual_list_left = None
+        self.actual_list_right = None
+        self.label_name = None
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("Workstudy")
-        MainWindow.resize(1209, 700)
+        MainWindow.resize(1366, 768)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.frontview_label = QtWidgets.QLabel(self.centralwidget)
@@ -562,6 +573,67 @@ class Ui_MainWindow(object):
         self.cam_toplabel.setFrameShape(QtWidgets.QFrame.Box)
         self.cam_toplabel.setObjectName("cam_toplabel")
 
+        self.label = QtWidgets.QLabel(self.centralwidget)
+        self.label.setGeometry(QtCore.QRect(1070, 20, 67, 17))
+        self.label.setObjectName("label")
+        self.pushButton_name = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton_name.setGeometry(QtCore.QRect(1150, 180, 61, 31))
+        self.pushButton_name.setObjectName("pushButton_name")
+        self.label_output = QtWidgets.QLabel(self.centralwidget)
+        self.label_output.setGeometry(QtCore.QRect(480, 470, 67, 17))
+        self.label_output.setObjectName("label_output")
+        self.label_textoutput = QtWidgets.QLabel(self.centralwidget)
+        self.label_textoutput.setGeometry(QtCore.QRect(480, 490, 511, 141))
+        self.label_textoutput.setFrameShape(QtWidgets.QFrame.Box)
+        self.label_textoutput.setMidLineWidth(0)
+        self.label_textoutput.setObjectName("label_textoutput")
+        self.label_Left_step = QtWidgets.QLabel(self.centralwidget)
+        self.label_Left_step.setGeometry(QtCore.QRect(1070, 70, 111, 17))
+        self.label_Left_step.setObjectName("label_Left_step")
+        self.label_Right_step = QtWidgets.QLabel(self.centralwidget)
+        self.label_Right_step.setGeometry(QtCore.QRect(1070, 120, 111, 17))
+        self.label_Right_step.setObjectName("label_Right_step")
+        self.lineEdit_name = QtWidgets.QLineEdit(self.centralwidget)
+        self.lineEdit_name.setGeometry(QtCore.QRect(1070, 40, 221, 25))
+        self.lineEdit_name.setObjectName("lineEdit_name")
+        self.lineEdit_left_step = QtWidgets.QLineEdit(self.centralwidget)
+        self.lineEdit_left_step.setGeometry(QtCore.QRect(1070, 90, 221, 25))
+        self.lineEdit_left_step.setObjectName("lineEdit_left_step")
+        self.lineEdit_right_step = QtWidgets.QLineEdit(self.centralwidget)
+        self.lineEdit_right_step.setGeometry(QtCore.QRect(1070, 140, 221, 25))
+        self.lineEdit_right_step.setObjectName("lineEdit_right_step")
+
+        self.label_seatofheight = QtWidgets.QLabel(self.centralwidget)
+        self.label_seatofheight.setGeometry(QtCore.QRect(480, 340, 101, 17))
+        self.label_seatofheight.setObjectName("label_seatofheight")
+        self.label_biacromial = QtWidgets.QLabel(self.centralwidget)
+        self.label_biacromial.setGeometry(QtCore.QRect(600, 340, 161, 17))
+        self.label_biacromial.setObjectName("label_biacromial")
+        self.widget = QtWidgets.QWidget(self.centralwidget)
+        self.widget.setGeometry(QtCore.QRect(480, 360, 95, 25))
+        self.widget.setObjectName("widget")
+        self.horizontalLayout = QtWidgets.QHBoxLayout(self.widget)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.lcdNumber_seatofheight = QtWidgets.QLCDNumber(self.widget)
+        self.lcdNumber_seatofheight.setObjectName("lcdNumber_seatofheight")
+        self.horizontalLayout.addWidget(self.lcdNumber_seatofheight)
+        self.label_cm_seafiofheight = QtWidgets.QLabel(self.widget)
+        self.label_cm_seafiofheight.setObjectName("label_cm_seafiofheight")
+        self.horizontalLayout.addWidget(self.label_cm_seafiofheight)
+        self.widget1 = QtWidgets.QWidget(self.centralwidget)
+        self.widget1.setGeometry(QtCore.QRect(600, 360, 92, 25))
+        self.widget1.setObjectName("widget1")
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.widget1)
+        self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.lcdNumber_biacromialbreadth = QtWidgets.QLCDNumber(self.widget1)
+        self.lcdNumber_biacromialbreadth.setObjectName("lcdNumber_biacromialbreadth")
+        self.horizontalLayout_2.addWidget(self.lcdNumber_biacromialbreadth)
+        self.label_2 = QtWidgets.QLabel(self.widget1)
+        self.label_2.setObjectName("label_2")
+        self.horizontalLayout_2.addWidget(self.label_2)
+
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1209, 22))
@@ -607,6 +679,8 @@ class Ui_MainWindow(object):
         self.start_button.clicked.connect(self.start_video_3)  # type: ignore
         self.stop_button.clicked.connect(self.stop_video_1)  # type: ignore
         self.stop_button.clicked.connect(self.stop_video_2)  # type: ignore
+
+        self.pushButton_name.clicked.connect(self.get_name_lastname)
         # self.stop_button.clicked.connect(self.stop_video_ros_)  # type: ignore
 
         # self.action_Graph_process_Round_Time_s.triggered.connect(self.plot_process_time)
@@ -636,7 +710,20 @@ class Ui_MainWindow(object):
         self.cam_frontlabel.setText(_translate("MainWindow", "cam1"))
         self.cam_sidelabel.setText(_translate("MainWindow", "cam2"))
         self.cam_toplabel.setText(_translate("MainWindow", "cam3"))
-        self.menu_File.setTitle(_translate("MainWindow", "&File"))
+        self.label.setText(_translate("MainWindow", "Name"))
+        self.pushButton_name.setText(_translate("MainWindow", "Ok"))
+        self.label_output.setText(_translate("MainWindow", "output"))
+        self.label_textoutput.setText(_translate("MainWindow", "message"))
+        self.label_Left_step.setText(_translate("MainWindow", "Left step"))
+        self.label_Right_step.setText(_translate("MainWindow", "Right step"))
+        self.lineEdit_left_step.setText(_translate("MainWindow", "[6,7,8]"))
+        self.lineEdit_right_step.setText(_translate("MainWindow", "[5,4,3]"))
+
+        self.label_seatofheight.setText(_translate("MainWindow", "seat of height"))
+        self.label_biacromial.setText(_translate("MainWindow", "biacromial breadth"))
+        self.label_cm_seafiofheight.setText(_translate("MainWindow", "cm"))
+        self.label_2.setText(_translate("MainWindow", "cm"))
+        # self.menu_File.setTitle(_translate("MainWindow", "&File"))
         self.menu_Tool.setTitle(_translate("MainWindow", "&Tool"))
         self.toolBar.setWindowTitle(_translate("MainWindow", "toolBar"))
         self.action_Graph_process_Round_Time_s.setText(_translate("MainWindow", "&Graph process : Item/Time(s)"))
@@ -728,6 +815,28 @@ class Ui_MainWindow(object):
         self.fname_calST, _ = QFileDialog.getOpenFileName(None, 'Open file','CSV files (.csv)')
         if self.fname_calST:
             self.cal_st.lineEdit_filerealtime.setText(self.fname_calST)
+
+    def get_name_lastname(self):
+        self.label_name = self.lineEdit_name.text()
+        self.lineEdit_name.setText( self.label_name)
+
+        label_left_step = self.lineEdit_left_step.text()
+        self.lineEdit_left_step.setText(label_left_step)
+
+        label_right_step = self.lineEdit_right_step.text()
+        self.lineEdit_right_step.setText(label_right_step)
+
+        self.actual_list_left = self.convert_string_to_list(label_left_step)
+        self.actual_list_right = self.convert_string_to_list(label_right_step)
+
+        self.label_textoutput.setText(f"{self.label_name}, {len(self.label_name)}, {self.actual_list_left}, {type(self.actual_list_left)}, {self.actual_list_right}, {type(self.actual_list_right)}")
+    
+    def convert_string_to_list(self,string_list):
+        try:
+            return ast.literal_eval(string_list)
+        except (ValueError, SyntaxError) as e:
+            self.label_textoutput.setText(f"Error converting string to list: {e}")
+            return None
 
     def start_video_(self):
         if self.wedcam_radiobutton.isChecked():

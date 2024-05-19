@@ -1,9 +1,10 @@
 import sys
+import os
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-sys.path.append("ui")
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import main_ui
+from ui import main_ui
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
