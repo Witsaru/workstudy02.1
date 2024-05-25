@@ -19,7 +19,7 @@ def calcu_stantime(file_,ratfac,allowa):
 
     aver = round(sum(y)/len(y),3)
     nor = round(aver*(ratfac/100),3)
-    sta = round(nor * (1-(allowa/100)),3)
+    sta = round(nor * (1+(allowa/100)),3)
 
     return [aver, nor, sta]
 

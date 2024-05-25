@@ -1,8 +1,9 @@
 import sys
 import pandas as pd
+import os
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLineEdit, QComboBox, QHBoxLayout
-sys.path.append("/home/witsarut/workstudy02_ws/src/plot")
-import process_cha as pcha
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from plot import process_cha as pcha
 
 class MyWidget(QWidget):
     def __init__(self):

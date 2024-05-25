@@ -5,13 +5,13 @@ import csv
 all_time = []
 time_poor = []
 
-with open('csv_data/Test_05/all_Time_Test_05_4.csv', newline='') as csvfile:
+with open('csv_data/Test_02B/all_Time_Test_02B_11.csv', newline='') as csvfile:
     reader = csv.reader(csvfile)
     for row in reader:
         if row[1] != '0':  # ตรวจสอบเพื่อหลีกเลี่ยงข้อมูลที่เป็น 0
             all_time.append(float(row[1]))
 
-with open('csv_data/Test_05/time_poor_Test_05_4.csv', newline='') as csvfile:
+with open('csv_data/Test_02B/time_poor_Test_02B_11.csv', newline='') as csvfile:
     reader = csv.reader(csvfile)
     for row in reader:
         if row[1] != '0':  # ตรวจสอบเพื่อหลีกเลี่ยงข้อมูลที่เป็น 0
@@ -26,7 +26,7 @@ colors = ['#66b3ff','#ff9999']
 print(sizes)
 
 plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=140)
-plt.title('Proportion of Total Time vs Time Poor Time is Test_04')
+plt.title('Proportion of Total Time vs Time Poor Time is Test_02')
 plt.axis('equal')  # ทำให้กราฟเป็นวงกลมแท้
 
 # แสดงกราฟ
