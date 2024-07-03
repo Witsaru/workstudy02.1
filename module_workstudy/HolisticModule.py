@@ -123,6 +123,19 @@ class holistic_module():
             self.memory_pose = {}
 
         return self.memory_pose
+    
+    def keypoin_pose(self):
+        if self.results.pose_landmarks:
+            keypoints = []
+            for lm in self.results.pose_landmarks.landmark:
+                keypoints.extend([lm.x, lm.y, lm.z, lm.visibility])
+            
+            return keypoints
+        
+    def landmarks_pose(self):
+        if self.results.pose_landmarks:
+            return self.results.pose_landmarks.landmark
+
 
     def finehand(self, image):
         self.handleft_list = []
@@ -170,7 +183,7 @@ if __name__ == '__main__':
 
         success, image = cap.read()
         holistic.show_action(image, face=False)
-        lipose = holistic.finepos(image)
+        lipose = holistic.landmarks_pose()
         # print(lipose)
         # if len(lipose) > 0:
         #     right_hip = lipose[24]
@@ -179,6 +192,7 @@ if __name__ == '__main__':
         #     right_foot_index = lipose[32]
 
         #     B = 
+        print(lipose[holistic.mp_holistic.PoseLandmark.LEFT_SHOULDER.value].x, sep='\t')
 
         if not success:
             print('Ignoring empty camera frame.')

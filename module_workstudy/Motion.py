@@ -1,6 +1,7 @@
 # from timeit import default_timer as timer
 # import graphviz
 from module_workstudy.timer_ import Timer
+import time
 
 class Motion_time():
 
@@ -41,6 +42,8 @@ class Motion_time():
         self.main_time_r = []
         self.all_time_r = []
 
+        self.all_time_mix = []
+
         self.time_l_f = Timer()
         self.time_r_f = Timer()
 
@@ -49,6 +52,8 @@ class Motion_time():
 
         self.product_l = 0
         self.product_r = 0
+
+        self.count_total = 0
 
         # for i in range(0,num_action_left):
         #     self.time_study_l[f"Step{i+1}"] = []
@@ -85,7 +90,7 @@ class Motion_time():
         self.poor_list = {
                 'time': [],
                 'neck':[],
-                'torso':[]
+                'Working_posture':[]
             }
 
     def duo_move_action_l(self, script_l, sensor_position_l, dis_assemble_l, dis_stone_l):
@@ -119,17 +124,18 @@ class Motion_time():
                         self.time_study_l.start()
 
         if self.count_action_l >= num_process_l:
-            if dis_stone_l <= 45:
+            if dis_stone_l <= 40:
                 if self.step_l == 2:
                     self.step_l = 0
                     if self.all_l == 1:
                         total = round(self.time_l_f.stop(),3)
-                        self.all_time_l.append(total)
+                        self.all_time_mix.append([time.time(), total])
                         self.all_l = 0
                     self.total_l = round(self.time_study_l.stop(),3)
                     self.count_action_l = 0
                     self.side_time_l.append(self.total_l)
-                    # print(f"Stone_l: {self.total_l}")
+                    self.count_total+=1
+                    print(f"Stone_l: {self.total_l}, num: {self.count_total}")
                     self.main_time_l.append(self.side_time_l)
                     self.side_time_l = []
 
@@ -165,17 +171,18 @@ class Motion_time():
                         self.time_study_r.start()
 
         if self.count_action_r >= num_process_r :
-            if dis_stone_r <= 45:
+            if dis_stone_r <= 40:
                 if self.step_r == 2:
                     self.step_r = 0
                     if self.all_r == 1:
                         total = round(self.time_r_f.stop(),3)
-                        self.all_time_r.append(total)
+                        self.all_time_mix.append([time.time(), total])
                         self.all_r = 0
                     self.total_r = round(self.time_study_r.stop(),3)
                     self.count_action_r = 0
                     self.side_time_r.append(self.total_r)
-                    # print(f"Stone_r: {self.total_r}")
+                    self.count_total+=1
+                    print(f"Stone_r: {self.total_r}, num: {self.count_total}")
                     self.main_time_r.append(self.side_time_r)
                     self.side_time_r = []
 
@@ -193,7 +200,10 @@ class Motion_time():
     def return_time_real_r(self):
         return self.all_time_r
     
-    def poor_body(self, alert, neck, torso):
+    def return_time_real_mix(self):
+        return self.all_time_mix
+    
+    def poor_body(self, alert, neck, w_posture):
         if alert:
             if self.alert_poon:
                 self.alert_poon = False
@@ -207,7 +217,7 @@ class Motion_time():
                 total = round(self.time_poor.stop(),3)
                 self.poor_list['time'].append(total)
                 self.poor_list['neck'].append(neck)
-                self.poor_list['torso'].append(torso)
+                self.poor_list['Working_posture'].append(w_posture)
                 
     
     def return_poor_time(self):
@@ -221,9 +231,9 @@ class Motion_time():
     def count_product(self):
         return [self.product_r,self.product_l]
     
-    def body_posture_detection(self,neck_, torso):
+    def body_posture_detection(self,neck_, workpostuer):
         try:
-            if neck_ >= 48.73 :
+            if neck_ - 38.81 > 9.8 and workpostuer > 5:
                 return True
             else:
                 return False

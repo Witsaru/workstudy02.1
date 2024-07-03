@@ -219,7 +219,8 @@ class DrawPose():
 
         r_shoulder = self.list_pose[12]
         r_hip = self.list_pose[24]
-        r_ear = self.list_pose[8]      
+        r_ear = self.list_pose[8]
+        r_knee = self.list_pose[26] 
         if side == 1:
             if len(self.list_pose) > 0:
                 pass
@@ -230,16 +231,16 @@ class DrawPose():
                 cv2.circle(image, (r_shoulder[0],r_shoulder[1]-50), rad_circle, self.ff9999, -1)
                 cv2.circle(image, r_ear, rad_circle, self.ffcc99, -1)
                 cv2.circle(image, r_hip, rad_circle, self.ffcc99, -1)
-                cv2.circle(image, (r_hip[0],r_hip[1]-50), rad_circle, self.ff9999, -1)
+                cv2.circle(image, r_knee, rad_circle, self.ff9999, -1)
 
                 if not detection :
                     cv2.line(image, (r_shoulder), (r_ear), self._99ff99, size_line)
                     cv2.line(image, (r_shoulder), (r_shoulder[0],r_shoulder[1] - 50), self._99ff99, size_line)
                     cv2.line(image, (r_shoulder), (r_hip), self._99ff99, size_line)
-                    cv2.line(image, (r_hip), (r_hip[0],r_hip[1] - 50), self._99ff99, size_line)
+                    cv2.line(image, (r_hip), r_knee, self._99ff99, size_line)
 
-                else:
+                elif detection:
                     cv2.line(image, (r_shoulder), (r_ear), self.ff6666, size_line)
                     cv2.line(image, (r_shoulder), (r_shoulder[0],r_shoulder[1] - 50), self.ff6666, size_line)
                     cv2.line(image, (r_shoulder), (r_hip), self.ff6666, size_line)
-                    cv2.line(image, (r_hip), (r_hip[0],r_hip[1] - 50), self.ff6666, size_line)
+                    cv2.line(image, (r_hip), r_knee, self.ff6666, size_line)

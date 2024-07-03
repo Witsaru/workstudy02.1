@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 def findDistance(p1, p2):
     x1, y1 = p1
@@ -29,6 +30,16 @@ def findAngle_elbow(p1, p2, p3):
     if angle < 0:
         angle += 360
     
+    return angle
+
+def calculate_angle(a, b, c):
+    a = np.array(a)
+    b = np.array(b)
+    c = np.array(c)
+    radians = np.arctan2(c[1] - b[1], c[0] - b[0]) - np.arctan2(a[1] - b[1], a[0] - b[0])
+    angle = np.abs(radians * 180.0 / np.pi)
+    if angle > 180.0:
+        angle = 360 - angle
     return angle
 
 

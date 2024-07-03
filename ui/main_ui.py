@@ -15,6 +15,8 @@ import json
 import time
 import math
 import ast
+import numpy as np
+import csv
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # sys.path.append("/home/witsarut/workstudy_ws/src/opencv_ros/opencv_ros")
 
@@ -25,6 +27,7 @@ from module_workstudy import Motion as M
 from module_workstudy import utils as u
 # from opencv_ros2_sub import ImageSubscriber, cv_bridge_to_pixmap
 from module_workstudy import pandas_f as pdf
+from module_workstudy import data_coll as dc
 from module_workstudy.timer_ import Timer
 from module_workstudy import cal_st_
 
@@ -48,13 +51,15 @@ class VideoCaptureWidget(QtWidgets.QLabel):
         self.video_capture2 = None
         # self.subscriber = ImageSubscriber()
         self.holistic = hm.holistic_module()
+        self.mp_pose = self.holistic.mp_holistic
         self.motion = M.Motion_time()
 
         self.timer = QtCore.QTimer(self)
         self.timer2 = QtCore.QTimer(self)
         # if isinstance(self, VideoCaptureWidget):
         self.save_data = pdf.C_pandas(self.ui.label_name)
-        print(self.ui.label_name)
+        self.d_coll = dc.data_pandas(self.ui.label_name)
+        # print(self.ui.label_name)
         self.scrip_r = self.ui.actual_list_left #[6,7,8]
         self.scrip_l = self.ui.actual_list_right #[5,4,3]
 
@@ -100,6 +105,9 @@ class VideoCaptureWidget(QtWidgets.QLabel):
         self.poor_body = None
         self.poor = False
         self.time_all_poor = []
+        self.poor_posture_data = []
+        self.data_coll = []
+        self.data_coll2 = []
 
         self.check_ = []
         self.index = 0
@@ -130,10 +138,21 @@ class VideoCaptureWidget(QtWidgets.QLabel):
     def start_video(self, source):
         if not self.is_running:
             self.save_data = pdf.C_pandas(self.ui.label_name)
+            self.d_coll = dc.data_pandas(self.ui.label_name)
             print(self.ui.label_name)
             self.scrip_r = self.ui.actual_list_left #[6,7,8]
             self.scrip_l = self.ui.actual_list_right #[5,4,3]
 
+            path = self.ui.label_name
+
+            try:
+                os.makedirs(f"data_collection/{path}/image/Top")
+                os.makedirs(f"data_collection/{path}/image/Side")
+                os.makedirs(f"data_collection/{path}/data")
+                # os.makedirs(f"data_collection/{path}/data/Side")
+                print("Folder %s created!" % path)
+            except FileExistsError:
+                print("Folder %s already exists" % path)
 
             self.s_time_program = time.time()
             self._runpoor = time.time()
@@ -166,17 +185,17 @@ class VideoCaptureWidget(QtWidgets.QLabel):
             totol = round(self.e_time_program - self.s_time_program,3)
             self.all_time_program.append(totol)
             self.save_data.list_to_pasdan(self.all_time_program,"all_Time",self.round)
-            # self.timer4.stop()
+            self.d_coll.data_to_pasdan_top(self.data_coll2)
             self.video_capture.release()
             self.is_running = False
             self.save_data.list_to_pasdan(self.motion.return_time_l(),"Left",self.round)
             self.save_data.list_to_pasdan(self.motion.return_time_r(),"Right",self.round)
-            print(f"Time)_L: {self.motion.return_time_l()}\n")
-            print(f"Time_R: {self.motion.return_time_r()}\n")
-            self.save_data.list_to_pasdan(self.motion.return_time_real_l(),"real_Left",self.round)
-            self.save_data.list_to_pasdan(self.motion.return_time_real_r(),"real_Right",self.round)
-            print(f"Time_real_L: {self.motion.return_time_real_l()}\n")
-            print(f"Time_real_R: {self.motion.return_time_real_r()}\n")
+            # print(f"Time)_L: {self.motion.return_time_l()}\n")
+            # print(f"Time_R: {self.motion.return_time_r()}\n")
+            self.save_data.list_to_pasdan(self.motion.return_time_real_mix(),"real_Mix",self.round)
+            # self.save_data.list_to_pasdan(self.motion.return_time_real_r(),"real_Right",self.round)
+            # print(f"Time_real_L: {self.motion.return_time_real_l()}\n")
+            # print(f"Time_real_R: {self.motion.return_time_real_r()}\n")
             if self.arduino.is_open:
                 self.arduino.close()
             # df = pd.DataFrame(self.time_)
@@ -189,12 +208,10 @@ class VideoCaptureWidget(QtWidgets.QLabel):
             self.video_capture.release()
             self.is_running = False
             try:
-                self.save_data.list_to_pasdan(self.poor_body['time'],"time_poor",self.round)
-                self.save_data.list_to_pasdan(self.time_all_poor,"time_poor_alert",self.round)
-                self.save_data.list_to_pasdan(self.poor_body['neck'],"neck_poor",self.round)
+                self.d_coll.data_to_pasdan_side(self.data_coll)      
             except:
                 pass
-            print(f"Poor_time: {self.poor_body}\n")
+            # print(f"Poor_time: {self.poor_body}\n")
 
     def update_frame(self):
         ret, frame = self.video_capture.read()
@@ -221,6 +238,9 @@ class VideoCaptureWidget(QtWidgets.QLabel):
 
                     self.holistic.show_action(frame)
                     poeslist = self.holistic.finepos(frame)
+                    landmarks = self.holistic.landmarks_pose()
+                    keypoin_top_p = self.holistic.keypoin_pose()
+
                     # print(f"cam1: {poeslist} \n")
                     if len(poeslist) > 0:
                         try:
@@ -236,26 +256,11 @@ class VideoCaptureWidget(QtWidgets.QLabel):
                             r_index = poeslist[20]
                             l_index = poeslist[19]
 
+                            self.read_serial()
+
                             drawPose = dp.DrawPose(frame, poeslist)
 
                             sho_90_ = ap.findAngle(r_shoulder, l_shoulder)
-
-                            A_arm_r = ap.findAngle(r_elbow, r_wrist)
-                            A_arm_l = ap.findAngle(l_elbow, l_wrist)
-
-                            A_shr_l = ap.findAngle(l_shoulder, l_elbow)
-                            A_shr_r = ap.findAngle(r_shoulder, r_elbow)
-
-                            A_elbow_l = ap.findAngle_elbow(l_shoulder, l_elbow, l_wrist)
-                            A_elbow_r = ap.findAngle_elbow(r_shoulder, r_elbow, r_wrist)
-
-                            tp = ap.findAngle(r_shoulder, r_wrist)
-
-                            # d_s_e_r = ap.findDistance(r_shoulder, r_elbow)
-                            # d_e_w_r = ap.findDistance(r_shoulder, r_index)
-
-                            # d_s_e_l = ap.findDistance(l_shoulder, l_elbow)
-                            # d_e_w_l = ap.findDistance(l_index, l_index)
                             
                             dis_r_wrist_0 = ap.findDistance(r_index, id_0)
                             dis_r_wrist_1 = ap.findDistance(r_index, id_1)
@@ -263,22 +268,54 @@ class VideoCaptureWidget(QtWidgets.QLabel):
                             dis_l_wrist_10 = ap.findDistance(l_index, id_10)
                             dis_l_wrist_11 = ap.findDistance(l_index, id_11)
 
-                            self.read_serial()
+                            angle_elbow_left = ap.calculate_angle(
+                                [landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].x, landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].y],
+                                [landmarks[self.mp_pose.PoseLandmark.LEFT_ELBOW.value].x, landmarks[self.mp_pose.PoseLandmark.LEFT_ELBOW.value].y],
+                                [landmarks[self.mp_pose.PoseLandmark.LEFT_WRIST.value].x, landmarks[self.mp_pose.PoseLandmark.LEFT_WRIST.value].y]
+                            )
 
-                            # print(f"rigth: {dis_r_wrist_0,dis_r_wrist_1} letf: {dis_l_wrist_10,dis_l_wrist_11}")
+                            angle_elbow_right = ap.calculate_angle(
+                                [landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x, landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y],
+                                [landmarks[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].x, landmarks[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].y],
+                                [landmarks[self.mp_pose.PoseLandmark.RIGHT_WRIST.value].x, landmarks[self.mp_pose.PoseLandmark.RIGHT_WRIST.value].y]
+                            )
+
+                            angle_shoulder_left = ap.calculate_angle(
+                                [landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x, landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y],
+                                [landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].x, landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].y],
+                                [landmarks[self.mp_pose.PoseLandmark.LEFT_ELBOW.value].x, landmarks[self.mp_pose.PoseLandmark.LEFT_ELBOW.value].y]
+                            )
+
+                            angle_shoulder_right = ap.calculate_angle(
+                                [landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].x, landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].y],
+                                [landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x, landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y],
+                                [landmarks[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].x, landmarks[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].y]
+                            )
+
+                            # print(dis_r_wrist_1, dis_l_wrist_11, sep='\t')
+
                             if self.sensor_po2 is not None:
                                 self.motion.duo_move_action_l(self.scrip_l, self.sensor_l,dis_l_wrist_10, dis_l_wrist_11)
+
+                                timeste = time.time()
+                                angles_t = [angle_elbow_left,angle_elbow_right,angle_shoulder_left,angle_shoulder_right]
+                                self.data_coll2.append([timeste, keypoin_top_p, angles_t, self.sensor_l])
+                                cv2.imwrite(f"data_collection/{self.ui.label_name}/image/Top/{timeste}.jpg", frame)
+
                             if self.sensor_po is not None:
                                 self.motion.duo_move_action_r(self.scrip_r,self.sensor_r, dis_r_wrist_0, dis_r_wrist_1)
 
-                            # print(dis_l_wrist_10, dis_l_wrist_11)
+                                timeste_r = time.time()
+                                angles_t = [angle_elbow_left,angle_elbow_right,angle_shoulder_left,angle_shoulder_right]
+                                self.data_coll2.append([timeste_r, keypoin_top_p, angles_t, self.sensor_r])
+                                cv2.imwrite(f"data_collection/{self.ui.label_name}/image/Top/{timeste_r}.jpg", frame)
 
                             pixel_distance_shoulders = abs(r_shoulder[0] - l_shoulder[0])
                             distance_shoulders_cm = (pixel_distance_shoulders / self.pixels_per_cm)
                             self.ui.lcdNumber_biacromialbreadth.display(distance_shoulders_cm)
                             # print( distance_shoulders_cm)
 
-                            if (distance_shoulders_cm >= 37):
+                            if (distance_shoulders_cm >= 40):
                                 # print( distance_shoulders_cm)
 
                                 if sho_90_ == 90:
@@ -327,8 +364,12 @@ class VideoCaptureWidget(QtWidgets.QLabel):
                             self.ui.label_textoutput.setText(f'Error = {e} ')
 
                 elif self == self.ui.cam_sidelabel:
-                    self.holistic.show_action(frame)
+                    self.holistic.show_action(frame, draw=False)
                     poeslist = self.holistic.finepos(frame)
+                    keypoin_side_p = self.holistic.keypoin_pose()
+                    landmarks_s = self.holistic.landmarks_pose()
+                    # print(type(keypoin_side_p[0]))
+                    # land_side_p = self.holistic.landmarks_pose()
                     # print(f"cam2: {poeslist} \n")
                     if len(poeslist) > 0:
                         l_shoulder = poeslist[11]
@@ -357,36 +398,68 @@ class VideoCaptureWidget(QtWidgets.QLabel):
                             p_h = math.pow(p_cm,2)- math.pow(h,2)
 
                             D = b_cm + math.sqrt(abs(p_h)) + f_cm
-                            # print(D)
+                            self.ui.lcdNumber_seatofheight.display(D)
+
+                            # w_postuse = ap.findAngle_elbow(r_shoulder,r_hip,right_knee)
+                            # print(w_postuse)
                         except Exception as e:
                             self.ui.label_textoutput.setText(f'Error = {e} ')
 
                         neck = ap.findAngle(r_shoulder, r_eye)
                         torso = ap.findAngle(r_hip, r_shoulder)
+                        w_postuse = ap.findAngle_elbow(r_shoulder,r_hip,right_knee)
+                        # print(neck, torso, sep='\t')
+
+                        angle_elbow_right_s = ap.calculate_angle(
+                            [landmarks_s[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x, landmarks_s[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y],
+                            [landmarks_s[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].x, landmarks_s[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].y],
+                            [landmarks_s[self.mp_pose.PoseLandmark.RIGHT_WRIST.value].x, landmarks_s[self.mp_pose.PoseLandmark.RIGHT_WRIST.value].y]
+                        )
+
+                        angle_shoulder_right_s = ap.calculate_angle(
+                            [landmarks_s[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].x, landmarks_s[self.mp_pose.PoseLandmark.RIGHT_ELBOW.value].y],
+                            [landmarks_s[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x, landmarks_s[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y],
+                            [landmarks_s[self.mp_pose.PoseLandmark.RIGHT_HIP.value].x, landmarks_s[self.mp_pose.PoseLandmark.RIGHT_HIP.value].y]
+                        )
 
                         posture = self.motion.body_posture_detection(neck, torso)
 
-                        if posture:
+                        if not posture:
                             if self.poor:
                                 self._stoppoor = time.time()
                                 total = round(self._stoppoor - self._runpoor,3)
                                 self.time_all_poor.append(total)
                                 self.poor = False
 
-                        else:
+                            time_save = time.time()
+                            cv2.imwrite(f"data_collection/{self.ui.label_name}/image/Side/{time_save}.jpg", frame)
+                            angles = [angle_shoulder_right_s, angle_elbow_right_s,neck, torso]
+                            label = "Good"
+                            self.data_coll.append([time_save , keypoin_side_p, angles, label])
+                            # print(keypoin_side_p)
+                            
+
+                        elif posture:
                             if not self.poor:
                                 self.poor = True
+                                
+                            time_save = time.time()
+                            cv2.imwrite(f"data_collection/{self.ui.label_name}/image/Side/{time_save}.jpg", frame)
+                            angles = [angle_shoulder_right_s, angle_elbow_right_s,neck, torso]
+                            label = "Bad"
+                            self.data_coll.append([time_save, keypoin_side_p, angles, label])
+                                # print(keypoin_side_p)
 
-                        drawPose = dp.DrawPose(frame, poeslist)
-                        drawPose.draw_side_pos(
-                            frame, detection=posture, rad_circle=5, size_line=2
-                        )
-                        self.time_poon = self.motion.poor_body(posture, neck, torso)
+                        self.time_poon = self.motion.poor_body(posture, neck, w_postuse)
 
                         self.poor_body = self.motion.return_poor_time()
                         # print(self.poor_body)
 
                 # elif self == self.ui.cam_toplabel:
+                        drawPose = dp.DrawPose(frame, poeslist)
+                        drawPose.draw_side_pos(
+                            frame, detection=posture, rad_circle=5, size_line=4
+                        )
 
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             h, w, ch = frame.shape
@@ -443,7 +516,7 @@ class VideoCaptureWidget(QtWidgets.QLabel):
                 self.sensor_r = self.sensor_po
             if self.sensor_po2 in self.scrip_l:
                 self.sensor_l = self.sensor_po2
-
+            # print(self.sensor_l, self.sensor_r, sep='\t')
 
 class Ui_MainWindow(object):
     def __init__(self):
@@ -719,7 +792,7 @@ class Ui_MainWindow(object):
         self.lineEdit_left_step.setText(_translate("MainWindow", "[6,7,8]"))
         self.lineEdit_right_step.setText(_translate("MainWindow", "[5,4,3]"))
 
-        self.label_seatofheight.setText(_translate("MainWindow", "seat of height"))
+        self.label_seatofheight.setText(_translate("MainWindow", "distance between buttocks and toes"))
         self.label_biacromial.setText(_translate("MainWindow", "biacromial breadth"))
         self.label_cm_seafiofheight.setText(_translate("MainWindow", "cm"))
         self.label_2.setText(_translate("MainWindow", "cm"))
