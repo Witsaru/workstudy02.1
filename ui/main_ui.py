@@ -70,7 +70,8 @@ class VideoCaptureWidget(QtWidgets.QLabel):
             self.arduino = serial.Serial(port="/dev/ttyACM0", baudrate=115200, timeout=0.1)
 
         except Exception as e:
-            self.ui.label_textoutput.setText(f'Error = {e} ')
+            # self.ui.label_textoutput.setText(f'Error = {e} ')
+            print(e)
 
         # self.bridge = CvBridge()
 

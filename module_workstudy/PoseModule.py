@@ -128,8 +128,8 @@ if __name__ == "__main__":
 
     # OpenCV video capture setup
     cap = cv2.VideoCapture(0)  # Adjust the argument for your camera
-    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT,240)
-    # cap.set(cv2.CAP_PROP_FRAME_WIDTH,320)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT,480)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH,640)
 
     deterhand = handDetector()
     deterpos = poseDetector()

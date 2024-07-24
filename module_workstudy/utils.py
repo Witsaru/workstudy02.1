@@ -70,10 +70,10 @@ def memory_aruco(ids_num, image, aruco_dict):
         return aruco_marker_memory[ids_num]
 
 if __name__ == "__main__":
-    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_1000)
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_ORIGINAL)
     # parameters = cv2.aruco.DetectorParameters_create()  # Create DetectorParameters object
-    cap1 = cv2.VideoCapture()
-    cap1.open("/dev/v4l/by-id/usb-046d_081b_03345560-video-index0")
+    cap1 = cv2.VideoCapture(0)
+    # cap1.open("/dev/v4l/by-id/usb-046d_081b_03345560-video-index0")
     
     while True:
         _, frame = cap1.read()
